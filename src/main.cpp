@@ -9,9 +9,18 @@
 
 #include "secrets.h"
 
+#include <GxEPD.h>
+#include <GxGDEH029A1/GxGDEH029A1.cpp>      // 2.9" b/w
+#include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
+#include <GxIO/GxIO.cpp>
+// FreeFonts from Adafruit_GFX
+#include <Fonts/FreeMonoBold9pt7b.h>
+
+GxIO_Class io(SPI, /*CS=D8*/ SS, /*DC=D3*/ 0, /*RST=D4*/ 2); // arbitrary selection of D3(=0), D4(=2), selected for default of GxEPD_Class
+GxEPD_Class display(io /*RST=D4*/ /*BUSY=D2*/); // default selection of D4(=2), D2(=4)
+
 // (SHA-1) If Slack changes their SSL fingerprint, you would need to update this
 #define SLACK_SSL_FINGERPRINT "C1 0D 53 49 D2 3E E5 2B A2 61 D5 9E 6F 99 0D 3D FD 8B B2 B3"
-// Get token by creating new bot integration at https://my.slack.com/services/new/bot
 
 ESP8266WiFiMulti WiFiMulti;
 WebSocketsClient webSocket;
@@ -19,6 +28,20 @@ WebSocketsClient webSocket;
 long nextCmdId = 1;
 bool connected = false;
 unsigned long lastPing = 0;
+
+const GFXfont* f = &FreeMonoBold9pt7b;
+const char *last_message = "";
+
+void showMessageCallback()
+{
+  display.setRotation(1);
+  display.fillScreen(GxEPD_WHITE);
+  display.setTextColor(GxEPD_BLACK);
+  display.setFont(f);
+  display.setCursor(0, 0);
+  display.println();
+  display.println(last_message);
+}
 
 /**
   Sends a ping message to Slack. Call this function immediately after establishing
@@ -35,12 +58,23 @@ void sendPing() {
 }
 
 /**
-  Looks for color names in the incoming slack messages and
-  animates the ring accordingly. You can include several
-  colors in a single message, e.g. `red blue zebra black yellow rainbow`
+payload: {"text":"test SUCCEEDED","bot_id":"BDAEDGKCZ",
+          "type":"message",
+          "subtype":"bot_message",
+          "team":"AAAAAAAA",
+          "channel":"AAAAAA",
+          "event_ts":"1539460264.000100",
+          "ts":"1539460264.000100"}
 */
 void processSlackMessage(char *payload) {
-  Serial.printf(payload);
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& root = jsonBuffer.parseObject(payload);
+  if (!root.success())
+      Serial.println(F("Failed to read payload, using default configuration"));
+  if(root["type"] == "message"){
+    last_message = root["text"];
+    display.drawPaged(showMessageCallback);
+  }
 }
 
 /**
@@ -99,6 +133,7 @@ bool connectToSlack() {
 void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);
+  display.init(115200);
 
   WiFiMulti.addAP(WIFI_SSID, WIFI_PASSWORD);
   while (WiFiMulti.run() != WL_CONNECTED) {

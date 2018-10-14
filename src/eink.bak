@@ -11,8 +11,8 @@
 #include <ArduinoJson.h>
 
 #include "secrets.h"
-#include <GxEPD.h>
 
+#include <GxEPD.h>
 #include <GxGDEH029A1/GxGDEH029A1.cpp>      // 2.9" b/w
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
