@@ -32,6 +32,7 @@ unsigned long lastPing = 0;
 const GFXfont* f = &FreeMonoBold9pt7b;
 const char *last_message = "";
 
+
 void showMessageCallback()
 {
   display.setRotation(1);
@@ -41,6 +42,21 @@ void showMessageCallback()
   display.setCursor(0, 0);
   display.println();
   display.println(last_message);
+}
+
+void showAttachment(JsonObject& root)
+{
+  display.setRotation(1);
+  display.fillScreen(GxEPD_WHITE);
+  display.setTextColor(GxEPD_BLACK);
+  display.setFont(f);
+  display.setCursor(0, 0);
+  display.println();
+
+  display.println(root["attachments"][0]["pretext"].as<char*>());
+  display.println(root["attachments"][0]["title"].as<char*>());
+  display.println(root["attachments"][0]["text"].as<char*>());
+  display.update();
 }
 
 /**
@@ -65,13 +81,24 @@ payload: {"text":"test SUCCEEDED","bot_id":"BDAEDGKCZ",
           "channel":"AAAAAA",
           "event_ts":"1539460264.000100",
           "ts":"1539460264.000100"}
-*/
+
+          {"text":"","bot_id":"BDAEDGKCZ",
+          "attachments":[{"fallback":"AWS codebuild: SampleProjectName IN_PROGRESS",
+          "text":"build-status: IN_PROGRESS",
+          "pretext":"CodeBuild Build State Change","title":"SampleProjectName","id":1,"title_link":"https:\/\/","ts":1499820148,"color":"36a64f"}],
+          "type":"message","subtype":"bot_message","team":"TDB2CAKGA","channel":"GDAAHFD24","event_ts":"1539604493.000100","ts":"1539604493.000100"}
+**/
 void processSlackMessage(char *payload) {
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(payload);
   if (!root.success())
       Serial.println(F("Failed to read payload, using default configuration"));
-  if(root["type"] == "message"){
+
+  JsonVariant att = root["attachments"];
+  if(att.success()){
+    showAttachment(root);
+  }
+  else if(root["type"] == "message" && root["text"] != ""){
     last_message = root["text"];
     display.drawPaged(showMessageCallback);
   }
