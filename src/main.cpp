@@ -8,6 +8,7 @@
 #include <ArduinoJson.h>
 
 #include "secrets.h"
+#include "icon.h"
 
 #include <GxEPD.h>
 #include <GxGDEH029A1/GxGDEH029A1.cpp>      // 2.9" b/w
@@ -48,13 +49,18 @@ void showAttachment(JsonObject& root)
 {
   display.setRotation(1);
   display.fillScreen(GxEPD_WHITE);
+
+  display.drawBitmap(aws_icon_bits,  0, 0, aws_icon_width, aws_icon_height, GxEPD_BLACK);
+  display.update();
+
   display.setTextColor(GxEPD_BLACK);
   display.setFont(f);
-  display.setCursor(0, 0);
   display.println();
-
+  display.setCursor(aws_icon_width + 10, display.getCursorY());
   display.println(root["attachments"][0]["pretext"].as<char*>());
+  display.setCursor(aws_icon_width + 10, display.getCursorY());
   display.println(root["attachments"][0]["title"].as<char*>());
+  display.println();
   display.println(root["attachments"][0]["text"].as<char*>());
   display.update();
 }
